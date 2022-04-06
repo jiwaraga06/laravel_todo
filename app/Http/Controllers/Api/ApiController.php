@@ -92,13 +92,19 @@ class ApiController extends Controller
     }
     public function addTodo(Request $request)
     {
-        $validate = Validator::make($request->all(), [
-            "message" => "required",
-        ]);
+        $validate = Validator::make(
+            $request->all(),
+            [
+                "message" => "required",
+            ],
+            [
+                "message.required" => "Pesan tidak boleh kosong"
+            ]
+        );
         if ($validate->fails()) {
             return response()->json([
                 "message" => "Gagal menambahkan task",
-                "error" => $validate,
+                "error" => $validate->errors(),
             ], 400);
         } else {
             Todo::create([
@@ -121,7 +127,7 @@ class ApiController extends Controller
         if ($validate->fails()) {
             return response()->json([
                 "message" => "Task gagal ditambahkan !",
-                "error" => $validate,
+                "error" => $validate->errors(),
             ], 400);
         } else {
             $todo = Todo::where('id', $request->id)->update([
