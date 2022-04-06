@@ -7,6 +7,8 @@ use App\Models\Todo;
 use App\Models\User;
 use Illuminate\Auth\Events\Validated;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
 
 class ApiController extends Controller
@@ -33,13 +35,52 @@ class ApiController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => $request->password
+            'password' => Hash::make($request->password),
         ]);
         $token = $user->createToken('auth_token')->plainTextToken;
         return response()->json([
             'message' => 'Success menambahkan Account !',
             'token' => $token
         ], 200);
+    }
+    public function login(Request $request)
+    {
+        $validate = Validator::make(
+            $request->all(),
+            [
+                'email' => 'required|email',
+                'password' => 'required',
+            ],
+            [
+                'email.required' => 'Email masih kosong',
+                'password.required' => 'Password masih kosong',
+            ],
+        );
+        if ($validate->fails()) {
+            return response()->json([
+                'message' => 'Login Gagal !',
+                'error' => $validate->errors(),
+            ], 400);
+        }
+
+        $auth = Auth::attempt([
+            'email' => $request->email,
+            'password' => $request->password,
+        ]);
+
+        if (!$auth) {
+            return response()->json([
+                'message' => 'Email dan Password tidak cocok',
+                'alert' => $auth
+            ], 401);
+        }
+        $user = User::where('email', $request->email)->first();
+        $token = $user->createToken('token-auth')->plainTextToken;
+        return response()->json([
+            'message' => 'Berhasil Login',
+            'access_token' => $token,
+            'user' => $user,
+        ]);
     }
     public function getTodo()
     {
@@ -74,21 +115,49 @@ class ApiController extends Controller
     public function updateTodo(Request $request)
     {
         $validate = Validator::make($request->all(), [
-            "isCompleted" => "required",
+            // "isCompleted" => "required",
             "id" => "required"
         ]);
         if ($validate->fails()) {
             return response()->json([
-                "message" => "Gagal menambahkan task",
+                "message" => "Task gagal ditambahkan !",
                 "error" => $validate,
             ], 400);
         } else {
-            Todo::where('id', $request->id)->update([
+            $todo = Todo::where('id', $request->id)->update([
                 "isCompleted" => 1
             ]);
+            if ($todo) {
+                return response()->json([
+                    "message" => "Task berhasil di ubah"
+                ], 200);
+            } else {
+                return response()->json([
+                    "message" => "Task tidak dapat di temukan"
+                ], 401);
+            }
+        }
+    }
+    public function deleteTodo(Request $request)
+    {
+        $validate = Validator::make($request->all(), [
+            'id' => 'required',
+        ]);
+        if ($validate->fails()) {
             return response()->json([
-                "message" => "Berhasil mengubah task"
+                "message" => "Gagal Menghapus todo",
+                "error" => $validate
+            ]);
+        }
+        $todo = Todo::where('id', $request->id)->delete();
+        if ($todo) {
+            return response()->json([
+                "message" => "Task berhasil di hapus"
             ], 200);
+        } else {
+            return response()->json([
+                "message" => "Task tidak dapat di temukan"
+            ], 401);
         }
     }
 }

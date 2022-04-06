@@ -23,3 +23,4 @@ Route::get('/todo', [ApiController::class, 'getTodo']);
 Route::post('/addTodo', [ApiController::class, 'addTodo']);
 Route::post('/updateTodo', [ApiController::class, 'updateTodo']);
 Route::post('/register', [ApiController::class, 'register']);
+Route::post('/login', [ApiController::class, 'login']);
